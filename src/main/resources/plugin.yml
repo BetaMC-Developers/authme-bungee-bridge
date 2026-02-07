@@ -1,0 +1,4 @@
+name: AuthMeBungeeBridge
+version: ${project.version}
+main: org.betamc.authmebungeebridge.AuthMeBungeeBridge
+author: zavdav
