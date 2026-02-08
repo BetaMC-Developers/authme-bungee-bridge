@@ -11,34 +11,41 @@ import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.plugin.Plugin;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Locale;
-import java.util.Set;
+import java.util.Map;
 import java.util.logging.Level;
 
 public class AuthMeBungeeBridge extends Plugin implements Listener {
 
     private static final String PREFIX = "[AuthMeBungeeBridge] ";
-    private final Set<String> authenticated = Collections.synchronizedSet(new HashSet<>());
+    private final Map<String, PlayerAuth> authenticated = Collections.synchronizedMap(new HashMap<>());
 
     @Override
     public void onEnable() {
         getProxy().getPluginManager().registerListener(this, this);
     }
 
-    public boolean isUnauthenticated(ProxiedPlayer player) {
-        return !this.authenticated.contains(player.getName().toLowerCase(Locale.ROOT));
+    public PlayerAuth getAuthentication(ProxiedPlayer player) {
+        return this.authenticated.get(player.getName().toLowerCase(Locale.ROOT));
+    }
+
+    public boolean isAuthenticated(ProxiedPlayer player) {
+        return getAuthentication(player) != null;
     }
 
     @Subscribe
     private void onServerConnect(ServerConnectEvent event) {
-        if (event.getPlayer().getServer() == null)
-            return;
-
-        if (isUnauthenticated(event.getPlayer())) {
+        if (event.getPlayer().getServer() == null) return;
+        PlayerAuth auth = getAuthentication(event.getPlayer());
+        if (auth != null) {
+            sendAuthMeLogin(auth, event.getPlayer(), event.getTarget());
+        } else {
             event.setCancelled(true);
             getProxy().getLogger().log(Level.INFO, PREFIX + event.getPlayer().getName() + " tried to connect to server " + event.getTarget().getName() + " while being unauthenticated");
         }
@@ -46,12 +53,10 @@ public class AuthMeBungeeBridge extends Plugin implements Listener {
 
     @Subscribe
     private void onChat(ChatEvent event) {
-        if (!(event.getSender() instanceof ProxiedPlayer))
-            return;
-
+        if (!(event.getSender() instanceof ProxiedPlayer)) return;
         ProxiedPlayer player = (ProxiedPlayer) event.getSender();
         String message = event.getMessage().toLowerCase(Locale.ROOT);
-        if (isUnauthenticated(player) && !message.startsWith("/login") && !message.startsWith("/register")) {
+        if (!isAuthenticated(player) && !message.startsWith("/login") && !message.startsWith("/register")) {
             event.setCancelled(true);
             getProxy().getLogger().log(Level.INFO, PREFIX + player.getName() + " tried to send message while being unauthenticated: '" + event.getMessage() + "'");
         }
@@ -67,20 +72,43 @@ public class AuthMeBungeeBridge extends Plugin implements Listener {
 
         if (event.getTag().equals("authme:login")) {
             event.setCancelled(true);
-            handleLogin(player, server, event.getData());
+            handleAuthMeLogin(player, server, event.getData());
         } else if (event.getTag().equals("authme:logout")) {
             event.setCancelled(true);
-            handleLogout(player, server, event.getData());
+            handleAuthMeLogout(player, server, event.getData());
         }
     }
 
-    private void handleLogin(ProxiedPlayer player, ServerInfo server, byte[] data) {
+    private void sendAuthMeLogin(PlayerAuth auth, ProxiedPlayer player, ServerInfo target) {
+        try {
+            ByteArrayOutputStream data = new ByteArrayOutputStream();
+            DataOutputStream out = new DataOutputStream(data);
+
+            out.writeUTF(auth.getName());
+            out.writeUTF(auth.getHash());
+            out.writeUTF(auth.getIp());
+            out.writeLong(auth.getLastLogin());
+
+            target.sendData("authme:login", data.toByteArray());
+            getProxy().getLogger().log(Level.INFO, PREFIX + "Sent authme:login for " + player.getName() + " to server " + target.getName());
+        } catch (IOException e) {
+            getProxy().getLogger().log(Level.SEVERE, PREFIX + "Failed to send authme:login for " + player.getName() + " to server " + target.getName(), e);
+        }
+    }
+
+    private void handleAuthMeLogin(ProxiedPlayer player, ServerInfo server, byte[] data) {
         getProxy().getLogger().log(Level.INFO, PREFIX + "Received authme:login for " + player.getName() + " from server " + server.getName());
 
         String name;
+        String hash;
+        String ip;
+        long lastLogin;
         try {
             DataInputStream in = new DataInputStream(new ByteArrayInputStream(data));
             name = in.readUTF();
+            hash = in.readUTF();
+            ip = in.readUTF();
+            lastLogin = in.readLong();
         } catch (IOException e) {
             getProxy().getLogger().log(Level.SEVERE, PREFIX + "Failed to read authme:login for " + player.getName(), e);
             return;
@@ -91,11 +119,12 @@ public class AuthMeBungeeBridge extends Plugin implements Listener {
             return;
         }
 
-        this.authenticated.add(name.toLowerCase(Locale.ROOT));
+        PlayerAuth auth = new PlayerAuth(name, hash, ip, lastLogin);
+        this.authenticated.put(name.toLowerCase(Locale.ROOT), auth);
         getProxy().getLogger().log(Level.INFO, PREFIX + "Added " + player.getName() + " to the authentication cache");
     }
 
-    private void handleLogout(ProxiedPlayer player, ServerInfo server, byte[] data) {
+    private void handleAuthMeLogout(ProxiedPlayer player, ServerInfo server, byte[] data) {
         getProxy().getLogger().log(Level.INFO, PREFIX + "Received authme:logout for " + player.getName() + " from server " + server.getName());
 
         String name;
