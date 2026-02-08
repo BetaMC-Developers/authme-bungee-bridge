@@ -3,8 +3,8 @@ package org.betamc.authmebungeebridge;
 import com.google.common.eventbus.Subscribe;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
-import net.md_5.bungee.api.connection.Server;
 import net.md_5.bungee.api.event.ChatEvent;
+import net.md_5.bungee.api.event.PlayerDisconnectEvent;
 import net.md_5.bungee.api.event.PluginMessageEvent;
 import net.md_5.bungee.api.event.ServerConnectEvent;
 import net.md_5.bungee.api.plugin.Listener;
@@ -80,6 +80,12 @@ public class AuthMeBungeeBridge extends Plugin implements Listener {
             event.setCancelled(true);
             handleAuthMeLogout(player, server, event.getData());
         }
+    }
+
+    @Subscribe
+    private void onPlayerDisconnect(PlayerDisconnectEvent event) {
+        this.authenticated.remove(event.getPlayer().getName().toLowerCase(Locale.ROOT));
+        getProxy().getLogger().log(Level.INFO, PREFIX + "Removed " + event.getPlayer().getName() + " from the authentication cache");
     }
 
     private void sendAuthMeLogin(PlayerAuth auth, ProxiedPlayer player, ServerInfo target) {
