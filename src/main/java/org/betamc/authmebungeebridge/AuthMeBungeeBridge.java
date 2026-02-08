@@ -142,7 +142,7 @@ public class AuthMeBungeeBridge extends Plugin implements Listener {
     }
 
     private void handleAuthMeLogout(ProxiedPlayer player, ServerInfo server, byte[] data) {
-        getProxy().getLogger().log(Level.INFO, PREFIX + "Received authme:logout for " + player.getName() + " from server " + server.getName());
+        getProxy().getLogger().log(Level.INFO, PREFIX + "Received authme:logout from server " + server.getName());
 
         String secretKey;
         String name;
@@ -151,17 +151,17 @@ public class AuthMeBungeeBridge extends Plugin implements Listener {
             secretKey = in.readUTF();
             name = in.readUTF();
         } catch (IOException e) {
-            getProxy().getLogger().log(Level.SEVERE, PREFIX + "Failed to read authme:logout for " + player.getName(), e);
+            getProxy().getLogger().log(Level.SEVERE, PREFIX + "Failed to read authme:logout from server " + server.getName(), e);
             return;
         }
 
         if (!secretKey.equals(this.config.getSecretKey())) {
-            getProxy().getLogger().log(Level.WARNING, PREFIX + "Received unauthenticated authme:logout for " + player.getName() + " from server " + server.getName());
+            getProxy().getLogger().log(Level.WARNING, PREFIX + "Received unauthenticated authme:logout for " + name + " from server " + server.getName());
             return;
         }
 
         this.authenticated.remove(name.toLowerCase(Locale.ROOT));
-        getProxy().getLogger().log(Level.INFO, PREFIX + "Removed " + player.getName() + " from the authentication cache");
+        getProxy().getLogger().log(Level.INFO, PREFIX + "Removed " + name + " from the authentication cache");
     }
 
 }
