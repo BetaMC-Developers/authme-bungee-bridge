@@ -28,6 +28,8 @@ public class AuthMeBungeeBridge extends Plugin implements Listener {
 
     @Override
     public void onEnable() {
+        getProxy().registerChannel("authme:login");
+        getProxy().registerChannel("authme:logout");
         getProxy().getPluginManager().registerListener(this, this);
     }
 
