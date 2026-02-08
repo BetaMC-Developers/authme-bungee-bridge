@@ -25,7 +25,7 @@
         <dependency>
             <groupId>com.github.BetaMC-Developers</groupId>
             <artifactId>BungeeCord</artifactId>
-            <version>01a22ae</version>
+            <version>e1e470a</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
