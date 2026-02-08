@@ -131,11 +131,6 @@ public class AuthMeBungeeBridge extends Plugin implements Listener {
             return;
         }
 
-        if (!name.toLowerCase(Locale.ROOT).equals(player.getName().toLowerCase(Locale.ROOT))) {
-            getProxy().getLogger().log(Level.WARNING, PREFIX + "The name '" + name + "' specified in authme:login does not match the name of the target player " + player.getName());
-            return;
-        }
-
         PlayerAuth auth = new PlayerAuth(name, hash, ip, lastLogin);
         this.authenticated.put(name.toLowerCase(Locale.ROOT), auth);
         getProxy().getLogger().log(Level.INFO, PREFIX + "Added " + player.getName() + " to the authentication cache");
