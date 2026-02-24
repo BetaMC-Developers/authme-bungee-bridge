@@ -70,15 +70,13 @@ public class AuthMeBungeeBridge extends Plugin implements Listener {
 
     @Subscribe
     private void onPluginMessage(PluginMessageEvent event) {
-        ProxiedPlayer player = event.getReceiver();
         ServerInfo server = event.getSender().getInfo();
-
         if (event.getTag().equals("authme:login")) {
             event.setCancelled(true);
-            handleAuthMeLogin(player, server, event.getData());
+            handleAuthMeLogin(server, event.getData());
         } else if (event.getTag().equals("authme:logout")) {
             event.setCancelled(true);
-            handleAuthMeLogout(player, server, event.getData());
+            handleAuthMeLogout(server, event.getData());
         }
     }
 
@@ -106,8 +104,8 @@ public class AuthMeBungeeBridge extends Plugin implements Listener {
         }
     }
 
-    private void handleAuthMeLogin(ProxiedPlayer player, ServerInfo server, byte[] data) {
-        getProxy().getLogger().log(Level.INFO, PREFIX + "Received authme:login for " + player.getName() + " from server " + server.getName());
+    private void handleAuthMeLogin(ServerInfo server, byte[] data) {
+        getProxy().getLogger().log(Level.INFO, PREFIX + "Received authme:login from server " + server.getName());
 
         String secretKey;
         String name;
@@ -122,21 +120,21 @@ public class AuthMeBungeeBridge extends Plugin implements Listener {
             ip = in.readUTF();
             lastLogin = in.readLong();
         } catch (IOException e) {
-            getProxy().getLogger().log(Level.SEVERE, PREFIX + "Failed to read authme:login for " + player.getName(), e);
+            getProxy().getLogger().log(Level.SEVERE, PREFIX + "Failed to read authme:login from server " + server.getName(), e);
             return;
         }
 
         if (!secretKey.equals(this.config.getSecretKey())) {
-            getProxy().getLogger().log(Level.WARNING, PREFIX + "Received unauthenticated authme:login for " + player.getName() + " from server " + server.getName());
+            getProxy().getLogger().log(Level.WARNING, PREFIX + "Received unauthenticated authme:login for " + name + " from server " + server.getName());
             return;
         }
 
         PlayerAuth auth = new PlayerAuth(name, hash, ip, lastLogin);
         this.authenticated.put(name.toLowerCase(Locale.ROOT), auth);
-        getProxy().getLogger().log(Level.INFO, PREFIX + "Added " + player.getName() + " to the authentication cache");
+        getProxy().getLogger().log(Level.INFO, PREFIX + "Added " + name + " to the authentication cache");
     }
 
-    private void handleAuthMeLogout(ProxiedPlayer player, ServerInfo server, byte[] data) {
+    private void handleAuthMeLogout(ServerInfo server, byte[] data) {
         getProxy().getLogger().log(Level.INFO, PREFIX + "Received authme:logout from server " + server.getName());
 
         String secretKey;
